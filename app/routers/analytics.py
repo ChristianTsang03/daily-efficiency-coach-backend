@@ -225,18 +225,22 @@ async def task_behavior_patterns(days: int = Query(default=7, ge=1, le=365),
     }
 
 @router.get("/habits/streak")
-async def habit_streak(habit_id: str,
-    user_id: str = Depends(get_current_user_id)):
-    """
-    Current streak: consecutive expected days ending today where log status == done.
-    """
+async def habit_streak(
+    habit_id: str,
+    date: str = Query(default=None),  # add this
+    user_id: str = Depends(get_current_user_id)
+):
     hid = to_object_id(habit_id)
-
     habit = await mongodb.collection("habits").find_one({"_id": hid, "userId": user_id})
     if not habit:
         return {"habitId": habit_id, "streak": 0}
 
-    today = Date.today()
+    # Use date from frontend if provided, otherwise fall back to UTC
+    if date:
+        y, m, d = map(int, date.split("-"))
+        today = Date(y, m, d)
+    else:
+        today = Date.today()
     streak = 0
 
     # Look back up to 365 days for MVP
